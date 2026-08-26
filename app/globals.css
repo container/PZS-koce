@@ -1,0 +1,115 @@
+@import "leaflet/dist/leaflet.css";
+
+:root {
+  color-scheme: light;
+  --background: #f6f4ef;
+  --surface: #ffffff;
+  --surface-muted: #ebe7df;
+  --text: #1e2725;
+  --muted: #68716d;
+  --border: #d6d0c5;
+  --accent: #1c6b5d;
+  --accent-strong: #134c42;
+  --success: #0f7a4f;
+  --danger: #a33a2d;
+  --warning: #8b6819;
+  --unknown: #4f6474;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--text);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+a {
+  color: var(--accent-strong);
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.hut-map {
+  width: 100%;
+  height: 100%;
+  min-height: 520px;
+  border-radius: 8px;
+  background: var(--surface-muted);
+}
+
+.hut-marker {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 3px solid #fff;
+  border-radius: 999px;
+  box-shadow: 0 4px 12px rgba(30, 39, 37, 0.28);
+}
+
+.hut-marker--available {
+  background: var(--success);
+}
+
+.hut-marker--unavailable {
+  background: var(--danger);
+}
+
+.hut-marker--unknown {
+  background: #8a918c;
+}
+
+.hut-marker--error {
+  background: var(--unknown);
+}
+
+.hut-marker--selected {
+  outline: 3px solid var(--accent-strong);
+  outline-offset: 2px;
+}
+
+.hut-marker--stale {
+  box-shadow:
+    0 0 0 3px rgba(181, 138, 43, 0.46),
+    0 4px 12px rgba(30, 39, 37, 0.28);
+}
+
+.leaflet-popup-content {
+  margin: 12px;
+}
+
+.hut-map-popup {
+  display: grid;
+  min-width: 180px;
+  gap: 5px;
+  color: var(--text);
+}
+
+.hut-map-popup strong {
+  line-height: 1.2;
+}
+
+.hut-map-popup span {
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.hut-map-popup button {
+  min-height: 34px;
+  margin-top: 5px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--accent-strong);
+  font-weight: 700;
+}

@@ -1,0 +1,622 @@
+.page {
+  width: min(1240px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 34px 0 56px;
+}
+
+.header {
+  margin-bottom: 20px;
+}
+
+.eyebrow {
+  margin: 0 0 10px;
+  color: var(--accent-strong);
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 3.3rem);
+  font-weight: 800;
+  line-height: 1;
+}
+
+.meta {
+  max-width: 760px;
+  margin: 10px 0 0;
+  color: var(--muted);
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+}
+
+.tabs button {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  min-height: 38px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  padding: 8px 12px;
+  white-space: nowrap;
+  font-weight: 700;
+}
+
+.tabs button span {
+  display: inline-grid;
+  place-items: center;
+  min-width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--surface-muted);
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.tabs .activeTab {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+.tabs .activeTab span {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+}
+
+.weekBoard,
+.search,
+.loadNote,
+.weekendProgress,
+.empty,
+.error,
+.summary {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.weekBoard {
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.weekBoardHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  padding: 13px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.weekBoardHeader div {
+  display: grid;
+  gap: 3px;
+}
+
+.weekTools {
+  display: flex !important;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px !important;
+  flex-wrap: wrap;
+}
+
+.weekTools button,
+.dayLabelLine button {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--accent-strong);
+  padding: 7px 9px;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.weekBoardHeader strong {
+  font-size: 1rem;
+}
+
+.weekBoardHeader span {
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.dayLabels,
+.weekRow {
+  display: grid;
+  grid-template-columns: minmax(210px, 1.3fr) minmax(280px, 2fr);
+  gap: 14px;
+  align-items: center;
+}
+
+.dayLabels {
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.dayLabelLine {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.dayLabelLine button {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.dayLabelLine .weekendDay {
+  border-color: #b58a2b;
+  background: #fff7dd;
+  color: #6f5013;
+}
+
+.weekRows {
+  display: grid;
+}
+
+.weekRow {
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.weekRow:last-child {
+  border-bottom: 0;
+}
+
+.weekHutName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+}
+
+.dayLine {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(18px, 1fr));
+  gap: 4px;
+  height: 12px;
+}
+
+.daySegment {
+  min-width: 0;
+  border-radius: 999px;
+  background: var(--surface-muted);
+}
+
+.daySegment.weekendSegment {
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.75);
+}
+
+.daySegment.available {
+  background: var(--success);
+}
+
+.daySegment.available.weekendSegment {
+  background: linear-gradient(90deg, var(--success), #b58a2b);
+}
+
+.daySegment.unavailable {
+  background: var(--danger);
+}
+
+.daySegment.unavailable.weekendSegment {
+  background: linear-gradient(90deg, var(--danger), #b58a2b);
+}
+
+.daySegment.unknown {
+  background: #c9c7c1;
+}
+
+.daySegment.unknown.weekendSegment {
+  background: repeating-linear-gradient(
+    135deg,
+    #c9c7c1,
+    #c9c7c1 5px,
+    #e8d69d 5px,
+    #e8d69d 10px
+  );
+}
+
+.search {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(120px, 1fr));
+  gap: 12px;
+  align-items: end;
+  padding: 16px;
+  box-shadow: 0 10px 30px rgba(30, 39, 37, 0.08);
+}
+
+.search label {
+  display: grid;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.search input {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--text);
+  padding: 9px 10px;
+  font: inherit;
+}
+
+.checkbox {
+  align-self: center;
+  grid-template-columns: 18px 1fr !important;
+  align-items: center;
+  color: var(--text) !important;
+}
+
+.checkbox input {
+  min-height: auto;
+  height: 18px;
+  padding: 0;
+}
+
+.search button,
+.rowActions button {
+  min-height: 42px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--accent);
+  color: #fff;
+  padding: 10px 14px;
+  font-weight: 700;
+}
+
+.search button:disabled,
+.rowActions button:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.loadNote {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  padding: 10px 12px;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.weekendProgress {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 12px;
+}
+
+.weekendProgress div:first-child {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.weekendProgress span {
+  color: var(--muted);
+}
+
+.progressBar {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface-muted);
+}
+
+.progressBar span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.2s ease;
+}
+
+.resultLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 0.72fr);
+  gap: 14px;
+  margin-top: 16px;
+  align-items: start;
+}
+
+.results {
+  min-width: 0;
+}
+
+.mapPane {
+  min-width: 0;
+}
+
+.mapShell {
+  position: sticky;
+  top: 14px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.mapHeader {
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 44px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.mapHeader span {
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.mapLoading {
+  display: grid;
+  place-items: center;
+  min-height: 520px;
+  color: var(--muted);
+  background: var(--surface-muted);
+}
+
+.empty,
+.error,
+.summary {
+  padding: 14px 16px;
+}
+
+.empty {
+  color: var(--muted);
+}
+
+.error,
+.reason {
+  color: var(--danger);
+}
+
+.summary {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.summary strong {
+  color: var(--success);
+  font-size: 1.4rem;
+}
+
+.summary span,
+.summary time {
+  color: var(--muted);
+}
+
+.hutRows {
+  display: grid;
+  gap: 8px;
+}
+
+.hutRow {
+  display: grid;
+  grid-template-columns: 132px 1fr;
+  gap: 14px;
+  align-items: stretch;
+  border: 1px solid var(--border);
+  border-left-width: 6px;
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 12px;
+  cursor: pointer;
+  transition:
+    border-color 0.16s ease,
+    box-shadow 0.16s ease,
+    transform 0.16s ease;
+}
+
+.hutRow:hover,
+.selectedRow {
+  box-shadow: 0 8px 22px rgba(30, 39, 37, 0.12);
+}
+
+.selectedRow {
+  border-color: var(--accent-strong);
+  transform: translateY(-1px);
+}
+
+.hutPhoto {
+  align-self: start;
+  width: 132px;
+  height: 108px;
+  border-radius: 6px;
+  object-fit: cover;
+  background: var(--surface-muted);
+}
+
+.hutContent {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(280px, 1.25fr);
+  gap: 14px;
+  align-items: start;
+  min-width: 0;
+}
+
+.rowAvailable {
+  border-left-color: var(--success);
+}
+
+.rowUnavailable {
+  border-left-color: var(--danger);
+  background: #fbfaf8;
+}
+
+.rowError {
+  border-left-color: var(--unknown);
+}
+
+.hutTopline {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.hutRow h2 {
+  margin: 5px 0 5px;
+  font-size: 1.05rem;
+  line-height: 1.2;
+}
+
+.hutStatus {
+  margin: 0;
+  color: var(--accent-strong);
+  font-weight: 700;
+}
+
+.unitPreview {
+  display: grid;
+  gap: 6px;
+  align-self: start;
+}
+
+.unitPill {
+  display: grid;
+  gap: 2px;
+  border: 1px solid var(--border);
+  border-left-width: 4px;
+  border-radius: 6px;
+  background: #fff;
+  padding: 7px 8px;
+}
+
+.unitPill.available {
+  border-left-color: var(--success);
+}
+
+.unitPill.unavailable {
+  border-left-color: var(--danger);
+}
+
+.unitPill.unknown,
+.unitPill.error {
+  border-left-color: var(--unknown);
+}
+
+.unitPill strong {
+  font-size: 0.86rem;
+}
+
+.unitPill span {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.rowActions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  grid-column: 2;
+  align-self: end;
+}
+
+.rowActions a {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--accent-strong);
+  padding: 9px 10px;
+  text-decoration: none;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+@media (max-width: 1040px) {
+  .resultLayout {
+    grid-template-columns: 1fr;
+  }
+
+  .mapShell {
+    position: static;
+  }
+
+  .search {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .hutRow {
+    grid-template-columns: 112px 1fr;
+  }
+
+  .hutPhoto {
+    width: 112px;
+    height: 96px;
+  }
+
+  .hutContent {
+    grid-template-columns: 1fr;
+  }
+
+  .rowActions {
+    grid-column: 1;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 680px) {
+  .page {
+    width: min(100% - 24px, 1240px);
+    padding-top: 26px;
+  }
+
+  .search,
+  .dayLabels,
+  .weekRow {
+    grid-template-columns: 1fr;
+  }
+
+  .weekBoardHeader {
+    display: grid;
+  }
+
+  .hutRow {
+    grid-template-columns: 1fr;
+  }
+
+  .hutPhoto {
+    width: 100%;
+    height: 180px;
+  }
+
+  .dayLabels > span:first-child {
+    display: none;
+  }
+}
