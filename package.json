@@ -7,7 +7,7 @@
     "build": "next build",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "DATABASE_URL=postgresql://unused:unused@localhost:5432/unused vitest run",
     "worker": "tsx worker/index.ts",
     "db:migrate": "tsx db/migrate.ts"
   },

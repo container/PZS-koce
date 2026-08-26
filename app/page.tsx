@@ -51,11 +51,6 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function formatEstimate(hutCount: number) {
-  const seconds = Math.max(8, Math.round(hutCount * 1.8));
-  return seconds < 60 ? `about ${seconds}s` : `about ${Math.ceil(seconds / 60)} min`;
-}
-
 function nextFourWeekends() {
   const today = new Date();
   const day = today.getDay();
@@ -249,6 +244,34 @@ export default function Home() {
     [filteredHuts, resultByHutId],
   );
 
+  useEffect(() => {
+    if (!availability?.huts.some((result) => result.status === "pending" || result.stale)) {
+      return;
+    }
+
+    const timer = window.setTimeout(async () => {
+      try {
+        const response = await fetch("/api/huts/availability", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            arrivalDate,
+            departureDate,
+            adults,
+            children: childAges.map((age) => ({ age })),
+            hutIds: filteredHuts.map((hut) => hut.id),
+            mode: "full",
+          }),
+        });
+        if (response.ok) setAvailability(await response.json());
+      } catch {
+        // Keep the visible stored result and retry on the next interval.
+      }
+    }, 5000);
+
+    return () => window.clearTimeout(timer);
+  }, [availability, filteredHuts, arrivalDate, departureDate, adults, childAges]);
+
   function selectHut(hutId: string) {
     setSelectedHutId(hutId);
 
@@ -305,7 +328,6 @@ export default function Home() {
 
       setAvailability(payload);
       setState("success");
-      startSevenDayPrecheck(filteredHuts);
     } catch (requestError) {
       setError(
         requestError instanceof Error
@@ -419,7 +441,7 @@ export default function Home() {
           next[hutResult.hut.id] = {
             ...(next[hutResult.hut.id] ?? {}),
             [day.arrivalDate]:
-              hutResult.availableCount > 0 ? "available" : "unavailable",
+              hutResult.status === "pending" ? "unknown" : hutResult.availableCount > 0 ? "available" : "unavailable",
           };
         }
 
@@ -508,6 +530,8 @@ export default function Home() {
     }
   }
 
+  // Kept as an explicit user-triggered board action; it is never started after search.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async function startSevenDayPrecheck(regionHuts: Hut[]) {
     const runId = weekRunId.current + 1;
     weekRunId.current = runId;
@@ -567,7 +591,7 @@ export default function Home() {
               next[hutResult.hut.id] = {
                 ...(next[hutResult.hut.id] ?? {}),
                 [day.arrivalDate]:
-                  hutResult.availableCount > 0 ? "available" : "unavailable",
+                  hutResult.status === "pending" ? "unknown" : hutResult.availableCount > 0 ? "available" : "unavailable",
               };
             }
 
@@ -602,8 +626,8 @@ export default function Home() {
           <p className={styles.eyebrow}>PZS Hut Availability Finder</p>
           <h1>Mountain hut availability</h1>
           <p className={styles.meta}>
-            Quick region scans stop at the first available unit per hut. Cached
-            availability is marked stale after 15 minutes.
+            Results come from a durable snapshot. Missing or stale results refresh in
+            the background, so searching never waits on Bentral.
           </p>
         </div>
       </section>
@@ -766,8 +790,8 @@ export default function Home() {
 
       <div className={styles.loadNote}>
         <span>{filteredHuts.length} huts in this region</span>
-        <span>Cold quick check estimate: {formatEstimate(filteredHuts.length)}</span>
-        <span>Cached searches are usually much faster.</span>
+        <span>Searches return the latest stored snapshot immediately.</span>
+        <span>Stale or missing snapshots are queued for refresh.</span>
       </div>
 
       <WeekendProgress progress={weekendProgress} />
@@ -776,15 +800,14 @@ export default function Home() {
         <section className={styles.results} aria-live="polite">
           {state === "idle" && (
             <div className={styles.empty}>
-              Select a region and search. The first pass stops at the first available
-              unit per hut.
+              Select a region and search. Results update from stored snapshots while
+              the worker refreshes missing or stale data.
             </div>
           )}
 
           {state === "loading" && (
             <div className={styles.empty}>
-              Checking {filteredHuts.length} huts in {selectedRegion}. Cold estimate:{" "}
-              {formatEstimate(filteredHuts.length)}.
+              Loading stored results for {filteredHuts.length} huts in {selectedRegion}.
             </div>
           )}
 
@@ -797,12 +820,10 @@ export default function Home() {
               <div className={styles.summary}>
                 <strong>{summary.hutsWithAvailability}</strong> huts with availability
                 <span>{summary.availableUnits} available signals</span>
-                <span>{summary.checked} huts checked</span>
+                <span>{summary.checked} stored hut results</span>
                 {summary.stale > 0 && <span>{summary.stale} stale cached rows</span>}
                 {summary.unresolved > 0 && <span>{summary.unresolved} hut errors</span>}
-                <time dateTime={availability.checkedAt}>
-                  Checked {new Date(availability.checkedAt).toLocaleString()}
-                </time>
+                <time dateTime={availability.checkedAt}>Search requested {new Date(availability.checkedAt).toLocaleString()}</time>
               </div>
 
               {visibleResults.length === 0 ? (
@@ -994,13 +1015,16 @@ function HutRow({
             <span>PZS #{result.hut.pzsId}</span>
             {result.mode === "full" && <span>full check</span>}
             {result.stale && <span>stale cache</span>}
+            {result.status === "pending" && <span>refresh queued</span>}
           </div>
           <h2>{result.hut.name}</h2>
           {result.status === "error" ? (
             <p className={styles.reason}>{result.errorMessage ?? "Could not check this hut."}</p>
           ) : (
             <p className={styles.hutStatus}>
-              {result.availableCount > 0
+              {result.status === "pending"
+                ? "No stored result yet — refresh queued"
+                : result.availableCount > 0
                 ? `${result.availableCount} available`
                 : "No availability found in quick check"}
               {result.lowestPriceDisplay ? ` · from ${result.lowestPriceDisplay}` : ""}

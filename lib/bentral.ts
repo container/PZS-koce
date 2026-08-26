@@ -67,7 +67,8 @@ export async function checkAllUnitsAvailability(
 
   const results: UnitAvailability[] = [];
   const queue = [...iframe.units];
-  const concurrency = 2;
+  // The worker is deliberately conservative with Bentral; one request at a time.
+  const concurrency = 1;
 
   async function worker() {
     while (queue.length > 0) {

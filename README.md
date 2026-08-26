@@ -1,13 +1,14 @@
-# PZS Hut Availability
+# PZS Hut Availability Finder
 
 A Next.js app for checking accommodation availability at selected Slovenian Alpine Association (PZS) huts. It lists huts by region, shows them on a map, and queries the Bentral booking embed used by each hut.
 
-## Setup
+## Local setup
 
 Requires Node.js 20.9 or newer and npm.
 
 ```bash
 npm install
+npm run db:migrate
 npm run dev
 ```
 
@@ -19,7 +20,33 @@ npm run lint
 npm run build
 ```
 
-## Bentral Integration
+In a second terminal, run the refresh worker:
+
+```bash
+npm run worker
+```
+
+Copy `.env.example` to `.env.local` and set `DATABASE_URL` first. The web app and worker must use the same database.
+
+## Production architecture
+
+The public web service never calls Bentral. A search reads the most recent matching Postgres snapshot and returns it immediately with its timestamp/source link. A missing or stale snapshot is deduplicated into a refresh job, so visitors never wait for an upstream scrape.
+
+The `refresh_jobs.cache_key` primary key makes concurrent requests safe. A worker claims jobs with `FOR UPDATE SKIP LOCKED`, processes sequentially, checks every unit's `unavailDates` calendar, and only prices calendar-available units. `unavail` blocks, `unavail_start` is allowed only on departure, and `unavail_end` is allowed. Durable price cache entries last one week and include hut, unit, dates, and guests.
+
+There is no cron or scheduled poller: an idle deployment makes zero Bentral requests.
+
+## Railway deployment
+
+1. Create a Railway project and add PostgreSQL.
+2. Create a web service from this repository; use Railway's normal build and `npm run start`, with the Postgres `DATABASE_URL` reference.
+3. Create a second service from the same repository, using the same `DATABASE_URL` and start command `npm run worker`.
+4. Run `npm run db:migrate` once in a Railway shell or one-off deployment before serving traffic.
+5. Keep the worker at one replica initially; it is intentionally sequential and rate-limited.
+
+Required: `DATABASE_URL` on both services. Optional: `AVAILABILITY_FRESH_FOR_MS` (default 900000), `DATABASE_POOL_MAX`, `BENTRAL_REQUEST_DELAY_MS` (default 1500), `WORKER_IDLE_POLL_MS` (default 5000), and `WORKER_ID`. Do not expose them as `NEXT_PUBLIC_*` variables.
+
+## Bentral integration
 
 Hut definitions in `lib/huts.ts` contain the public Bentral embed URL, building ID, and embed key for each supported hut. The server fetches the embed page, extracts accommodation units, then posts date and guest details to Bentral's availability endpoint.
 

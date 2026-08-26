@@ -29,14 +29,6 @@ export async function POST(request: Request) {
           (hutId): hutId is string => typeof hutId === "string",
         )
       : [];
-  const mode =
-    body &&
-    typeof body === "object" &&
-    "mode" in body &&
-    (body as { mode?: unknown }).mode === "full"
-      ? "full"
-      : "quick";
-
   const allHuts = getAllHuts();
   const huts =
     requestedHutIds.length > 0
