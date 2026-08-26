@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import L from "leaflet";
 import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
 import type { Hut } from "@/types/availability";
@@ -19,6 +19,7 @@ type HutMapProps = {
   summaries: HutMapSummary[];
   selectedHutId: string;
   onSelectHut: (hutId: string) => void;
+  onBoundsChange?: (bounds: { north: number; south: number; east: number; west: number }) => void;
 };
 
 const SLOVENIA_CENTER: L.LatLngTuple = [46.15, 14.8];
@@ -57,6 +58,7 @@ function FitMap({
   selectedHutId: string;
 }) {
   const map = useMap();
+  const fitted = useRef(false);
   const boundsKey = summaries
     .map((summary) => `${summary.hut.id}:${summary.hut.lat}:${summary.hut.lng}`)
     .join("|");
@@ -77,6 +79,8 @@ function FitMap({
       return;
     }
 
+    if (fitted.current) return;
+
     if (summaries.length === 1) {
       const [summary] = summaries;
       map.setView([summary.hut.lat, summary.hut.lng], 12);
@@ -88,13 +92,33 @@ function FitMap({
         summaries.map((summary) => [summary.hut.lat, summary.hut.lng]),
       );
       map.fitBounds(bounds, { maxZoom: 12, padding: [28, 28] });
+      fitted.current = true;
     }
   }, [boundsKey, map, selectedHutId, summaries]);
 
   return null;
 }
 
-export function HutMap({ summaries, selectedHutId, onSelectHut }: HutMapProps) {
+function MapViewportListener({ onBoundsChange }: Pick<HutMapProps, "onBoundsChange">) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!onBoundsChange) return;
+    const report = () => {
+      const bounds = map.getBounds();
+      onBoundsChange({ north: bounds.getNorth(), south: bounds.getSouth(), east: bounds.getEast(), west: bounds.getWest() });
+    };
+    report();
+    map.on("moveend", report);
+    return () => {
+      map.off("moveend", report);
+    };
+  }, [map, onBoundsChange]);
+
+  return null;
+}
+
+export function HutMap({ summaries, selectedHutId, onSelectHut, onBoundsChange }: HutMapProps) {
   const mapCenter = useMemo<L.LatLngTuple>(() => {
     const selected = summaries.find((summary) => summary.hut.id === selectedHutId);
 
@@ -117,10 +141,11 @@ export function HutMap({ summaries, selectedHutId, onSelectHut }: HutMapProps) {
       zoom={10}
     >
       <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        attribution='Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="https://viewfinderpanoramas.org/">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org/">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
+        url="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png"
       />
       <FitMap summaries={summaries} selectedHutId={selectedHutId} />
+      <MapViewportListener onBoundsChange={onBoundsChange} />
       {summaries.map((summary) => {
         const selected = summary.hut.id === selectedHutId;
 

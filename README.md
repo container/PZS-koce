@@ -28,6 +28,20 @@ npm run worker
 
 Copy `.env.example` to `.env.local` and set `DATABASE_URL` first. The web app and worker must use the same database.
 
+### Connecting locally to Railway Postgres
+
+The deployed services use Railway private networking. From a Mac, do not use
+`postgres.railway.internal`; open an encrypted tunnel instead:
+
+```bash
+railway link
+railway connect Postgres --tunnel-only
+```
+
+Keep the tunnel terminal running and copy its printed complete URL into
+uncommitted `.env.local` as `DATABASE_URL`. Its localhost port changes each
+time the tunnel opens. Do not expose the database publicly just for local work.
+
 ## Production architecture
 
 The public web service never calls Bentral. A search reads the most recent matching Postgres snapshot and returns it immediately with its timestamp/source link. A missing or stale snapshot is deduplicated into a refresh job, so visitors never wait for an upstream scrape.
@@ -40,8 +54,8 @@ There is no cron or scheduled poller: an idle deployment makes zero Bentral requ
 
 1. Create a Railway project and add PostgreSQL.
 2. Create a web service from this repository; use Railway's normal build and `npm run start`, with the Postgres `DATABASE_URL` reference.
-3. Create a second service from the same repository, using the same `DATABASE_URL` and start command `npm run worker`.
-4. Run `npm run db:migrate` once in a Railway shell or one-off deployment before serving traffic.
+3. Create a second service from the same repository, using the same `DATABASE_URL` and start command `npm run worker`; do not give it a public domain.
+4. Run `npm run db:migrate` as a web-service pre-deploy command (or once in a Railway shell) before serving traffic.
 5. Keep the worker at one replica initially; it is intentionally sequential and rate-limited.
 
 Required: `DATABASE_URL` on both services. Optional: `AVAILABILITY_FRESH_FOR_MS` (default 900000), `DATABASE_POOL_MAX`, `BENTRAL_REQUEST_DELAY_MS` (default 1500), `WORKER_IDLE_POLL_MS` (default 5000), and `WORKER_ID`. Do not expose them as `NEXT_PUBLIC_*` variables.

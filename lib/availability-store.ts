@@ -1,5 +1,5 @@
 import { pool } from "@/lib/db";
-import type { AvailabilitySearchInput, HutAvailabilitySummary, UnitAvailability } from "@/types/availability";
+import type { AvailabilitySearchInput, Hut, HutAvailabilitySummary, UnitAvailability } from "@/types/availability";
 
 const FRESH_FOR_MS = Number(process.env.AVAILABILITY_FRESH_FOR_MS ?? 15 * 60 * 1000);
 const PRICE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -31,6 +31,77 @@ export async function getStoredSummary(hut: HutAvailabilitySummary["hut"], input
   const results = snapshot?.result ?? [];
   const lowest = results.filter((item) => item.status === "available" && item.price !== undefined).sort((a, b) => Number(a.price) - Number(b.price))[0];
   return { hut, results, status: snapshot ? "checked" : "pending", availableCount: results.filter((item) => item.status === "available").length, unavailableCount: results.filter((item) => item.status === "unavailable").length, unresolvedCount: results.filter((item) => item.status === "unknown" || item.status === "error").length, lowestPrice: lowest?.price, lowestPriceDisplay: lowest?.priceDisplay, checkedAt: snapshot?.checkedAt ?? "", stale: snapshot?.stale ?? true, mode: "full", sourceUrl: snapshot?.sourceUrl ?? hut.bentralIframeUrl, errorMessage: snapshot?.lastError };
+}
+
+export type StoredWeekAvailability = {
+  hutId: string;
+  arrivalDate: string;
+  status: "available" | "unavailable" | "unknown";
+};
+
+/**
+ * Loads an entire one-night availability grid and queues stale cache entries in
+ * one database round trip. The worker still owns all upstream Bentral calls.
+ */
+export async function getStoredWeekAvailability(
+  huts: Hut[],
+  stays: Pick<AvailabilitySearchInput, "arrivalDate" | "departureDate">[],
+): Promise<StoredWeekAvailability[]> {
+  const requests = huts.flatMap((hut) =>
+    stays.map((stay) => ({
+      hutId: hut.id,
+      arrivalDate: stay.arrivalDate,
+      cacheKey: snapshotKey(hut.id, { ...stay, adults: 1, children: [] }),
+    })),
+  );
+
+  if (requests.length === 0) return [];
+
+  const cacheKeys = requests.map((request) => request.cacheKey);
+  const hutIds = requests.map((request) => request.hutId);
+  const arrivalDates = requests.map((request) => request.arrivalDate);
+  const { rows } = await pool.query<{
+    cache_key: string;
+    hut_id: string;
+    arrival_date: string;
+    result: UnitAvailability[] | null;
+    stale: boolean | null;
+  }>(
+    `WITH requested AS (
+      SELECT * FROM unnest($1::text[], $2::text[], $3::text[])
+        AS request(cache_key, hut_id, arrival_date)
+    ), snapshots AS (
+      SELECT snapshot.cache_key, snapshot.result, snapshot.expires_at <= now() AS stale
+      FROM availability_snapshots AS snapshot
+      INNER JOIN requested USING (cache_key)
+    ), queued AS (
+      INSERT INTO refresh_jobs (cache_key, hut_id, status)
+      SELECT request.cache_key, request.hut_id, 'queued'
+      FROM requested AS request
+      LEFT JOIN snapshots USING (cache_key)
+      WHERE snapshots.cache_key IS NULL OR snapshots.stale
+      ON CONFLICT (cache_key) DO UPDATE SET
+        status = CASE WHEN refresh_jobs.status IN ('succeeded', 'failed') THEN 'queued' ELSE refresh_jobs.status END,
+        available_at = CASE WHEN refresh_jobs.status IN ('succeeded', 'failed') THEN now() ELSE refresh_jobs.available_at END,
+        updated_at = now()
+    )
+    SELECT request.cache_key, request.hut_id, request.arrival_date,
+      snapshots.result, snapshots.stale
+    FROM requested AS request
+    LEFT JOIN snapshots USING (cache_key)`,
+    [cacheKeys, hutIds, arrivalDates],
+  );
+
+  return rows.map((row) => ({
+    hutId: row.hut_id,
+    arrivalDate: row.arrival_date,
+    status:
+      !row.result || row.stale
+        ? "unknown"
+        : row.result.some((unit) => unit.status === "available")
+          ? "available"
+          : "unavailable",
+  }));
 }
 
 export async function claimRefreshJob(workerId: string) {

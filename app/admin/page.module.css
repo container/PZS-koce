@@ -1,0 +1,30 @@
+.page { width: min(1240px, calc(100% - 32px)); margin: 0 auto; padding: 34px 0 56px; }
+.header { display: flex; justify-content: space-between; gap: 20px; align-items: start; margin-bottom: 24px; }
+.eyebrow { margin: 0 0 8px; color: var(--accent-strong); font-size: .82rem; font-weight: 700; text-transform: uppercase; }
+.header h1 { margin: 0; font-size: clamp(2rem, 4vw, 3rem); }
+.header p { max-width: 680px; margin: 8px 0 0; color: var(--muted); }
+.header a { border: 1px solid var(--border); border-radius: 6px; background: var(--surface); padding: 9px 11px; font-weight: 700; text-decoration: none; white-space: nowrap; }
+.cards, .grid { display: grid; gap: 12px; }
+.cards { grid-template-columns: repeat(4, 1fr); margin-bottom: 12px; }
+.grid { grid-template-columns: repeat(3, 1fr); margin-bottom: 18px; }
+.metric, .panel, .section { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+.metric { display: grid; gap: 6px; padding: 15px; }
+.metric span, .definitionList dt { color: var(--muted); font-size: .85rem; }
+.metric strong { color: var(--accent-strong); font-size: 1.8rem; }
+.danger strong, .failure { color: var(--danger); }
+.panel { padding: 15px; }
+.panel h2, .section h2 { margin: 0 0 14px; font-size: 1rem; }
+.definitionList { display: grid; gap: 11px; margin: 0; }
+.definitionList div { display: flex; gap: 12px; justify-content: space-between; }
+.definitionList dd { margin: 0; font-weight: 700; }
+.section { margin-top: 14px; padding: 15px; }
+.setup { max-width: 680px; border: 1px solid #d8bd79; border-radius: 8px; background: #fff8e7; padding: 18px; }
+.setup h2 { margin: 0 0 8px; }
+.setup p { margin: 0 0 14px; color: var(--muted); }
+.setup code { display: block; width: fit-content; margin-top: 8px; border-radius: 4px; background: #fff; padding: 7px 9px; color: var(--accent-strong); }
+.tableWrap { overflow-x: auto; }
+.section table { width: 100%; border-collapse: collapse; text-align: left; font-size: .86rem; }
+.section th, .section td { padding: 10px 8px; border-top: 1px solid var(--border); vertical-align: top; }
+.section th { color: var(--muted); font-size: .76rem; text-transform: uppercase; }
+@media (max-width: 800px) { .cards, .grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px) { .page { width: min(100% - 24px, 1240px); } .header, .cards, .grid { display: grid; grid-template-columns: 1fr; } }

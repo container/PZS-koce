@@ -1,4 +1,5 @@
 import * as cheerio from "cheerio";
+import { recordBentralRequest } from "@/lib/admin-metrics";
 import { getOrSetCached, getCachedEntry, setCached } from "@/lib/cache";
 import { formatBentralDate } from "@/lib/validation";
 import type {
@@ -153,12 +154,31 @@ async function fetchAndParseIframe(hut: Hut): Promise<ParsedIframe> {
     console.info("[bentral] fetching iframe", hut.bentralIframeUrl);
   }
 
-  const response = await fetch(hut.bentralIframeUrl, {
-    headers: {
-      "User-Agent": "Mozilla/5.0 (compatible; PZSAvailabilityMVP/0.1)",
-    },
-    next: { revalidate: 0 },
-  });
+  const startedAt = Date.now();
+  let response: Response;
+
+  try {
+    response = await fetch(hut.bentralIframeUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; PZSAvailabilityMVP/0.1)",
+      },
+      next: { revalidate: 0 },
+    });
+    await recordBentralRequest({
+      hutId: hut.id,
+      requestType: "iframe",
+      responseStatus: response.status,
+      durationMs: Date.now() - startedAt,
+    });
+  } catch (error) {
+    await recordBentralRequest({
+      hutId: hut.id,
+      requestType: "iframe",
+      durationMs: Date.now() - startedAt,
+      errorMessage: error instanceof Error ? error.message : "Network request failed.",
+    });
+    throw error;
+  }
 
   if (!response.ok) {
     throw new Error(`Bentral iframe request failed with ${response.status}.`);
@@ -328,6 +348,7 @@ async function checkUnitAvailability(
 
   try {
     const body = buildAvailabilityBody(hut, user, unit.bentralUnitId, input);
+    const startedAt = Date.now();
 
     if (process.env.NODE_ENV !== "production") {
       console.info("[bentral] availability request", {
@@ -339,16 +360,40 @@ async function checkUnitAvailability(
       });
     }
 
-    const response = await fetch(BENTRAL_AVAILABILITY_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-        Referer: hut.bentralIframeUrl,
-        "X-Requested-With": "XMLHttpRequest",
-        "User-Agent": "Mozilla/5.0 (compatible; PZSAvailabilityMVP/0.1)",
-      },
-      body,
-    });
+    let response: Response;
+
+    try {
+      response = await fetch(BENTRAL_AVAILABILITY_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+          Referer: hut.bentralIframeUrl,
+          "X-Requested-With": "XMLHttpRequest",
+          "User-Agent": "Mozilla/5.0 (compatible; PZSAvailabilityMVP/0.1)",
+        },
+        body,
+      });
+      await recordBentralRequest({
+        hutId: hut.id,
+        requestType: "availability",
+        unitId: unit.bentralUnitId,
+        arrivalDate: input.arrivalDate,
+        departureDate: input.departureDate,
+        responseStatus: response.status,
+        durationMs: Date.now() - startedAt,
+      });
+    } catch (error) {
+      await recordBentralRequest({
+        hutId: hut.id,
+        requestType: "availability",
+        unitId: unit.bentralUnitId,
+        arrivalDate: input.arrivalDate,
+        departureDate: input.departureDate,
+        durationMs: Date.now() - startedAt,
+        errorMessage: error instanceof Error ? error.message : "Network request failed.",
+      });
+      throw error;
+    }
 
     const text = await response.text();
 
