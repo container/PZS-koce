@@ -58,7 +58,7 @@ There is no cron or scheduled poller: an idle deployment makes zero Bentral requ
 4. Run `npm run db:migrate` as a web-service pre-deploy command (or once in a Railway shell) before serving traffic.
 5. Keep the worker at one replica initially; it is intentionally sequential and rate-limited.
 
-Required: `DATABASE_URL` on both services. Optional: `AVAILABILITY_FRESH_FOR_MS` (default 900000), `DATABASE_POOL_MAX`, `BENTRAL_REQUEST_DELAY_MS` (default 1500), `WORKER_IDLE_POLL_MS` (default 5000), and `WORKER_ID`. Do not expose them as `NEXT_PUBLIC_*` variables.
+Required: `DATABASE_URL` on both services. Optional: `AVAILABILITY_FRESH_FOR_MS` (default 900000), `DATABASE_POOL_MAX`, `BENTRAL_REQUEST_DELAY_MS` (default 0), `WORKER_IDLE_POLL_MS` (default 5000), and `WORKER_ID`. Do not expose them as `NEXT_PUBLIC_*` variables.
 
 ## Bentral integration
 

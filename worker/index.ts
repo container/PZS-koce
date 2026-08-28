@@ -6,7 +6,7 @@ async function main() {
     import("@/lib/availability-store"), import("@/lib/bentral"), import("@/lib/huts"), import("@/lib/db"),
   ]);
   const workerId = process.env.WORKER_ID ?? `worker-${process.pid}`;
-  const delayMs = Number(process.env.BENTRAL_REQUEST_DELAY_MS ?? 1500);
+  const delayMs = Number(process.env.BENTRAL_REQUEST_DELAY_MS ?? 0);
   const idleMs = Number(process.env.WORKER_IDLE_POLL_MS ?? 5000);
   const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 

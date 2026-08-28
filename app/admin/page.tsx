@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { connection } from "next/server";
 import { getAdminMetrics } from "@/lib/admin-metrics";
+import { AutoRefresh } from "./AutoRefresh";
 import styles from "./page.module.css";
 
 function formatDate(value: string | Date | null) {
@@ -54,6 +55,7 @@ export default async function AdminPage() {
             Counts below are outbound calls to Bentral only. Browser requests that only
             read Postgres are not counted.
           </p>
+          <AutoRefresh />
         </div>
         <Link href="/">Back to availability</Link>
       </header>

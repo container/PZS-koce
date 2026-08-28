@@ -41,7 +41,19 @@ export async function POST(request: Request) {
 
   // This route intentionally never contacts Bentral. Missing/stale records enqueue a
   // deduplicated job and return the last durable snapshot immediately.
-  const hutResults = await Promise.all(huts.map((hut) => getStoredSummary(hut, input)));
+  let hutResults;
+  try {
+    hutResults = await Promise.all(huts.map((hut) => getStoredSummary(hut, input)));
+  } catch (error) {
+    console.error("[availability] database unavailable", error);
+    return NextResponse.json(
+      {
+        error: "Database unavailable. For local development, connect the Railway Postgres tunnel and set its URL as DATABASE_URL in .env.local.",
+        code: "DATABASE_UNAVAILABLE",
+      },
+      { status: 503 },
+    );
+  }
   const response: MultiHutAvailabilityResponse = {
     arrivalDate: input.arrivalDate,
     departureDate: input.departureDate,
