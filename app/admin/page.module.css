@@ -19,6 +19,13 @@
 .definitionList dd { margin: 0; font-weight: 700; }
 .section { margin-top: 14px; padding: 15px; }
 .logDescription { margin: -6px 0 14px; color: var(--muted); font-size: .86rem; }
+.adminActions { display: grid; grid-template-columns: 1fr auto; gap: 14px 24px; align-items: center; margin-bottom: 14px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); padding: 15px; }
+.adminActions h2 { margin: 0 0 5px; font-size: 1rem; }
+.adminActions p { margin: 0; color: var(--muted); font-size: .86rem; }
+.actionButtons { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.actionButtons button { border: 1px solid var(--border); border-radius: 6px; background: var(--surface); padding: 9px 11px; font-weight: 700; cursor: pointer; }
+.actionButtons button:disabled { cursor: wait; opacity: .55; }
+.adminActions .actionMessage { grid-column: 1 / -1; color: var(--accent-strong); }
 .setup { max-width: 680px; border: 1px solid #d8bd79; border-radius: 8px; background: #fff8e7; padding: 18px; }
 .setup h2 { margin: 0 0 8px; }
 .setup p { margin: 0 0 14px; color: var(--muted); }
@@ -27,5 +34,5 @@
 .section table { width: 100%; border-collapse: collapse; text-align: left; font-size: .86rem; }
 .section th, .section td { padding: 10px 8px; border-top: 1px solid var(--border); vertical-align: top; }
 .section th { color: var(--muted); font-size: .76rem; text-transform: uppercase; }
-@media (max-width: 800px) { .cards, .grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 800px) { .cards, .grid { grid-template-columns: repeat(2, 1fr); } .adminActions { grid-template-columns: 1fr; } .actionButtons { justify-content: flex-start; } }
 @media (max-width: 560px) { .page { width: min(100% - 24px, 1240px); } .header, .cards, .grid { display: grid; grid-template-columns: 1fr; } }

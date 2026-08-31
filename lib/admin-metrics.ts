@@ -65,18 +65,24 @@ export async function getAdminMetrics() {
         COUNT(*) FILTER (WHERE created_at >= now() - interval '24 hours')::int AS last_day
         FROM bentral_requests GROUP BY request_type ORDER BY request_type`),
       pool.query(`SELECT
-        (SELECT COUNT(*)::int FROM availability_snapshots) AS availability_total,
-        (SELECT COUNT(*)::int FROM availability_snapshots WHERE expires_at > now()) AS availability_fresh,
-        (SELECT COUNT(*)::int FROM availability_snapshots WHERE expires_at <= now()) AS availability_stale,
-        (SELECT COUNT(*)::int FROM unit_price_cache WHERE expires_at > now()) AS price_fresh`),
+        (SELECT COUNT(*)::int FROM bentral_calendars) AS calendar_total,
+        (SELECT COUNT(*)::int FROM bentral_calendars WHERE expires_at > now()) AS calendar_fresh,
+        (SELECT COUNT(*)::int FROM bentral_calendars WHERE expires_at <= now()) AS calendar_stale,
+        (SELECT COUNT(*)::int FROM bentral_units) AS unit_total,
+        (SELECT COUNT(*)::int FROM bentral_prices WHERE checked_at IS NOT NULL) AS price_total`),
       pool.query(`SELECT status, COUNT(*)::int AS total
         FROM refresh_jobs GROUP BY status ORDER BY status`),
       pool.query(`SELECT hut_id, request_type, unit_id, arrival_date, departure_date,
           response_status, duration_ms, error_message, created_at
         FROM bentral_requests ORDER BY id DESC LIMIT 100`),
-      pool.query(`SELECT hut_id, arrival_date, departure_date, adults, checked_at, expires_at,
-          jsonb_array_length(result) AS unit_count
-        FROM availability_snapshots ORDER BY checked_at DESC LIMIT 12`),
+      pool.query(`SELECT calendar.hut_id, calendar.checked_at, calendar.expires_at,
+          calendar.horizon_start, calendar.horizon_end,
+          COUNT(unit.unit_id)::int AS unit_count
+        FROM bentral_calendars AS calendar
+        LEFT JOIN bentral_units AS unit ON unit.hut_id = calendar.hut_id
+        GROUP BY calendar.hut_id, calendar.checked_at, calendar.expires_at,
+          calendar.horizon_start, calendar.horizon_end
+        ORDER BY calendar.checked_at DESC LIMIT 20`),
     ]);
 
   return {
@@ -88,10 +94,11 @@ export async function getAdminMetrics() {
     },
     requestTypes: requestTypes.rows as { request_type: RequestType; total: number; last_day: number }[],
     caches: caches.rows[0] as {
-      availability_total: number;
-      availability_fresh: number;
-      availability_stale: number;
-      price_fresh: number;
+      calendar_total: number;
+      calendar_fresh: number;
+      calendar_stale: number;
+      unit_total: number;
+      price_total: number;
     },
     jobs: jobs.rows as { status: string; total: number }[],
     recentRequests: recentRequests.rows as Array<{
@@ -107,11 +114,10 @@ export async function getAdminMetrics() {
     }>,
     recentSnapshots: recentSnapshots.rows as Array<{
       hut_id: string;
-      arrival_date: string | Date;
-      departure_date: string | Date;
-      adults: number;
       checked_at: string | Date;
       expires_at: string | Date;
+      horizon_start: string | Date;
+      horizon_end: string | Date;
       unit_count: number;
     }>,
   };

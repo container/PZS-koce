@@ -13,12 +13,17 @@ export async function POST(request: Request) {
   }
   if (!dates.length) return NextResponse.json({ dates: [] });
   try {
-    const { rows } = await pool.query<{ arrival_date: string }>(
-      `SELECT DISTINCT arrival_date::text FROM availability_snapshots
-       WHERE arrival_date = ANY($1::date[]) AND expires_at > now()`,
+    const { rows } = await pool.query<{ date: string }>(
+      `SELECT requested.date::text
+       FROM unnest($1::date[]) AS requested(date)
+       WHERE EXISTS (
+         SELECT 1 FROM bentral_calendars
+         WHERE expires_at > now()
+           AND requested.date BETWEEN horizon_start AND horizon_end
+       )`,
       [dates],
     );
-    return NextResponse.json({ dates: rows.map((row) => row.arrival_date) });
+    return NextResponse.json({ dates: rows.map((row) => row.date) });
   } catch {
     return NextResponse.json({ dates: [] });
   }

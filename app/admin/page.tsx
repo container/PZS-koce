@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { connection } from "next/server";
 import { getAdminMetrics } from "@/lib/admin-metrics";
+import { AdminActions } from "./AdminActions";
 import { AutoRefresh } from "./AutoRefresh";
 import styles from "./page.module.css";
 
@@ -67,6 +68,8 @@ export default async function AdminPage() {
         <Metric label="Neuspešni klici" value={metrics.requestCounts.failed} danger />
       </section>
 
+      <AdminActions />
+
       <section className={styles.grid}>
         <Panel title="Vrste zahtevkov">
           <dl className={styles.definitionList}>
@@ -81,10 +84,11 @@ export default async function AdminPage() {
 
         <Panel title="Stanje predpomnilnika">
           <dl className={styles.definitionList}>
-            <div><dt>Sveži posnetki razpoložljivosti</dt><dd>{metrics.caches.availability_fresh}</dd></div>
-            <div><dt>Zastareli posnetki razpoložljivosti</dt><dd>{metrics.caches.availability_stale}</dd></div>
-            <div><dt>Vsi posnetki razpoložljivosti</dt><dd>{metrics.caches.availability_total}</dd></div>
-            <div><dt>Sveži vnosi cen enot</dt><dd>{metrics.caches.price_fresh}</dd></div>
+            <div><dt>Sveži koledarji</dt><dd>{metrics.caches.calendar_fresh}</dd></div>
+            <div><dt>Zastareli koledarji</dt><dd>{metrics.caches.calendar_stale}</dd></div>
+            <div><dt>Vsi koledarji</dt><dd>{metrics.caches.calendar_total}</dd></div>
+            <div><dt>Trajno shranjene enote</dt><dd>{metrics.caches.unit_total}</dd></div>
+            <div><dt>Shranjene cene</dt><dd>{metrics.caches.price_total}</dd></div>
           </dl>
         </Panel>
 
@@ -125,18 +129,17 @@ export default async function AdminPage() {
       </section>
 
       <section className={styles.section}>
-        <h2>Najnovejši predpomnjeni podatki o razpoložljivosti</h2>
+        <h2>Koledarji razpoložljivosti</h2>
         <div className={styles.tableWrap}>
           <table>
-            <thead><tr><th>Koča</th><th>Bivanje</th><th>Gosti</th><th>Enote</th><th>Preverjeno</th><th>Sveže do</th></tr></thead>
+            <thead><tr><th>Koča</th><th>Obdobje</th><th>Enote</th><th>Preverjeno</th><th>Sveže do</th></tr></thead>
             <tbody>
               {metrics.recentSnapshots.length === 0 ? (
-                <tr><td colSpan={6}>Posnetki razpoložljivosti še niso shranjeni.</td></tr>
+                <tr><td colSpan={5}>Koledarji razpoložljivosti še niso shranjeni.</td></tr>
               ) : metrics.recentSnapshots.map((snapshot, index) => (
                 <tr key={`${snapshot.hut_id}-${snapshot.checked_at}-${index}`}>
                   <td>{snapshot.hut_id}</td>
-                  <td>{formatDay(snapshot.arrival_date)} → {formatDay(snapshot.departure_date)}</td>
-                  <td>{snapshot.adults}</td>
+                  <td>{formatDay(snapshot.horizon_start)} → {formatDay(snapshot.horizon_end)}</td>
                   <td>{snapshot.unit_count}</td>
                   <td>{formatDate(snapshot.checked_at)}</td>
                   <td>{formatDate(snapshot.expires_at)}</td>

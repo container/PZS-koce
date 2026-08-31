@@ -44,9 +44,11 @@ time the tunnel opens. Do not expose the database publicly just for local work.
 
 ## Production architecture
 
-The public web service never calls Bentral. A search reads the most recent matching Postgres snapshot and returns it immediately with its timestamp/source link. A missing or stale snapshot is deduplicated into a refresh job, so visitors never wait for an upstream scrape. In Railway the web app and worker are separate services; local development connects to the remote database through the Railway tunnel.
+The public web service never calls Bentral. A search reads the latest per-hut calendar from Postgres and derives binary availability locally for the selected stay. A missing or stale calendar is deduplicated into one refresh job per hut, so visitors never wait for an upstream scrape. In Railway the web app and worker are separate services; local development connects to the remote database through the Railway tunnel.
 
-The `refresh_jobs.cache_key` primary key makes concurrent requests safe. A worker claims jobs with `FOR UPDATE SKIP LOCKED`, processes sequentially, checks every unit's `unavailDates` calendar, and only prices calendar-available units. `unavail` blocks, `unavail_start` is allowed only on departure, and `unavail_end` is allowed. Durable price cache entries last one week and include hut, unit, dates, and guests.
+The `refresh_jobs.cache_key` primary key makes concurrent requests safe. A worker claims jobs with `FOR UPDATE SKIP LOCKED` and processes them sequentially. One iframe response contains `unavailDates` for all unit types and the Bentral booking horizon; the app stores only the next three months. `unavail` blocks, `unavail_start` is allowed only on departure, and `unavail_end` is allowed. The application assumes one guest.
+
+Unit metadata is permanent and changes only through the admin refresh action. Prices are independent, last-known one-night values per unit. They never affect availability and are refreshed only by the admin background action.
 
 There is no cron or scheduled poller: an idle deployment makes zero Bentral requests.
 
@@ -62,24 +64,21 @@ Required: `DATABASE_URL` on both services. Optional: `AVAILABILITY_FRESH_FOR_MS`
 
 ## Bentral integration
 
-Hut definitions in `lib/huts.ts` contain the public Bentral embed URL, building ID, and embed key for each supported hut. The server fetches the embed page, extracts accommodation units, then posts date and guest details to Bentral's availability endpoint.
+Hut definitions in `lib/huts.ts` contain the public Bentral embed URL, building ID, and embed key for each supported hut. The worker fetches the embed page and extracts the permanent unit catalogue plus per-unit `unavailDates`. Normal availability searches need no additional Bentral calls. The pricing endpoint is used only by the manual background price refresh.
 
-This is an integration with Bentral's public embed behavior, not a documented or versioned API. It assumes that the iframe continues to expose a `user` field and either a `unit_data` JavaScript object or the current unit-selection markup. Availability is inferred from the first available pricing response, so results should be treated as a guide and confirmed on the linked Bentral booking page.
+This is an integration with Bentral's public embed behavior, not a documented or versioned API. It assumes that the iframe continues to expose a `user` field, `unavailDates`, and either a `unit_data` JavaScript object or the current unit-selection markup. Results should be treated as a guide and confirmed on the linked Bentral booking page.
 
 ## Cache Behavior
 
-The server keeps an in-memory cache and persists it to `.cache/bentral-cache.json` when the local filesystem is writable.
-
-- Parsed accommodation units are cached for 7 days.
-- Availability results are cached for 24 hours and are marked stale after 15 minutes in the UI.
-- Failed availability checks are cached for 15 minutes to avoid repeatedly retrying a failing upstream request.
-- Requests for the same cache key made concurrently share one upstream request.
-
-The `.cache` directory is ignored by Git. On serverless or ephemeral deployments, the persistent cache may not survive a restart or may be unavailable; the in-memory cache still works for the lifetime of an instance.
+- Unit metadata is stored permanently in `bentral_units` and refreshed manually.
+- Per-hut calendars are fresh for 15 minutes by default and cover three months.
+- Calendar refreshes use one iframe request per hut, regardless of how many dates or units a user views.
+- Last-known prices are stored indefinitely per unit and refreshed manually in the background.
+- Requests for the same hut calendar share one deduplicated refresh job.
 
 ## Limitations
 
 - The hut catalog is manually maintained and only covers the huts listed in `lib/huts.ts`.
 - Bentral can change its embed HTML, request fields, availability response, or access policy without notice, which can break parsing or checks.
 - This app does not complete bookings, validate final prices, or guarantee availability.
-- There is no upstream rate limiting, retry/backoff policy, or automated test suite yet. Be mindful of bulk availability checks in production.
+- There is no retry/backoff policy beyond delayed retries for failed jobs. Be mindful of bulk manual refreshes in production.

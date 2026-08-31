@@ -1,6 +1,8 @@
 import * as cheerio from "cheerio";
 import { beginBentralRequest, finishBentralRequest } from "@/lib/admin-metrics";
+import { getCachedBentralIframe, putCachedBentralIframe } from "@/lib/bentral-iframe-store";
 import { getOrSetCached, getCachedEntry, setCached } from "@/lib/cache";
+import type { UnavailabilityCalendar, UnavailabilityMarker } from "@/lib/calendar-store";
 import { formatBentralDate } from "@/lib/validation";
 import type {
   AccommodationUnit,
@@ -17,10 +19,7 @@ const IFRAME_CACHE_VERSION = "v2";
 const BENTRAL_AVAILABILITY_URL =
   "https://www.bentral.com/service/embed/ajax/order?action=available-pricings&currency=eur&lang=sl";
 
-type UnavailabilityMarker = "unavail" | "unavail_start" | "unavail_end";
-type UnavailabilityCalendar = Record<string, Record<string, UnavailabilityMarker>>;
-
-type ParsedIframe = {
+export type ParsedIframe = {
   units: AccommodationUnit[];
   user: string;
   unavailableDates: UnavailabilityCalendar;
@@ -43,11 +42,7 @@ export type PriceCache = {
 export async function getAccommodationUnits(
   hut: Hut,
 ): Promise<{ units: AccommodationUnit[]; cached: boolean }> {
-  const result = await getOrSetCached<ParsedIframe>(
-    getIframeCacheKey(hut.id),
-    UNITS_TTL_MS,
-    () => fetchAndParseIframe(hut),
-  );
+  const result = await getCachedIframe(hut);
 
   return {
     units: result.value.units,
@@ -60,11 +55,7 @@ export async function checkAllUnitsAvailability(
   input: AvailabilitySearchInput,
   priceCache?: PriceCache,
 ): Promise<UnitAvailability[]> {
-  const { value: iframe } = await getOrSetCached<ParsedIframe>(
-    getIframeCacheKey(hut.id),
-    UNITS_TTL_MS,
-    () => fetchAndParseIframe(hut),
-  );
+  const { value: iframe } = await getCachedIframe(hut);
 
   const results: UnitAvailability[] = [];
   const queue = [...iframe.units];
@@ -108,15 +99,35 @@ export async function checkAllUnitsAvailability(
   });
 }
 
+async function getCachedIframe(hut: Hut) {
+  const key = getIframeCacheKey(hut.id);
+  const memory = getCachedEntry<ParsedIframe>(key);
+  if (memory) {
+    return { value: memory.value, cached: true };
+  }
+
+  const durable = await getCachedBentralIframe(hut.id);
+  if (durable) {
+    setCached(key, durable, UNITS_TTL_MS);
+    return { value: durable, cached: true };
+  }
+
+  return getOrSetCached<ParsedIframe>(
+    key,
+    UNITS_TTL_MS,
+    async () => {
+      const iframe = await fetchBentralIframe(hut);
+      await putCachedBentralIframe(hut.id, iframe, UNITS_TTL_MS);
+      return iframe;
+    },
+  );
+}
+
 export async function checkFirstAvailableUnitAvailability(
   hut: Hut,
   input: AvailabilitySearchInput,
 ): Promise<UnitAvailability[]> {
-  const { value: iframe } = await getOrSetCached<ParsedIframe>(
-    getIframeCacheKey(hut.id),
-    UNITS_TTL_MS,
-    () => fetchAndParseIframe(hut),
-  );
+  const { value: iframe } = await getCachedIframe(hut);
   const checkedResults: UnitAvailability[] = [];
   const firstUnit = iframe.units[0];
 
@@ -149,7 +160,7 @@ export async function checkFirstAvailableUnitAvailability(
   return checkedResults;
 }
 
-async function fetchAndParseIframe(hut: Hut): Promise<ParsedIframe> {
+export async function fetchBentralIframe(hut: Hut): Promise<ParsedIframe> {
   if (process.env.NODE_ENV !== "production") {
     console.info("[bentral] fetching iframe", hut.bentralIframeUrl);
   }
@@ -202,6 +213,55 @@ async function fetchAndParseIframe(hut: Hut): Promise<ParsedIframe> {
   }
 
   return parsed;
+}
+
+export async function fetchBentralPrice(
+  hut: Hut,
+  user: string,
+  unitId: string,
+  input: AvailabilitySearchInput,
+): Promise<{ price?: number; priceDisplay?: string }> {
+  const body = buildAvailabilityBody(hut, user, unitId, input);
+  const startedAt = Date.now();
+  let requestId: string | null = null;
+  let response: Response;
+
+  try {
+    requestId = await beginBentralRequest({
+      hutId: hut.id,
+      requestType: "availability",
+      unitId,
+      arrivalDate: input.arrivalDate,
+      departureDate: input.departureDate,
+    });
+    response = await fetch(BENTRAL_AVAILABILITY_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+        Referer: hut.bentralIframeUrl,
+        "X-Requested-With": "XMLHttpRequest",
+        "User-Agent": "Mozilla/5.0 (compatible; PZSAvailabilityMVP/0.1)",
+      },
+      body,
+    });
+    await finishBentralRequest({
+      id: requestId,
+      responseStatus: response.status,
+      durationMs: Date.now() - startedAt,
+    });
+  } catch (error) {
+    await finishBentralRequest({
+      id: requestId,
+      durationMs: Date.now() - startedAt,
+      errorMessage: error instanceof Error ? error.message : "Network request failed.",
+    });
+    throw error;
+  }
+
+  if (!response.ok) throw new Error(`Bentral responded with ${response.status}.`);
+  const payload = JSON.parse(await response.text()) as BentralAvailabilityPayload;
+  const pricing = payload.pricings_available?.[0];
+  return { price: pricing?.amount, priceDisplay: pricing?.amount_show };
 }
 
 export function parseIframeHtml(html: string): ParsedIframe {
