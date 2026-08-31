@@ -40,6 +40,13 @@ button {
   cursor: pointer;
 }
 
+button:focus-visible,
+a:focus-visible,
+select:focus-visible {
+  outline: 3px solid #f3c92e;
+  outline-offset: 2px;
+}
+
 .hut-map {
   width: 100%;
   height: 100%;
@@ -113,3 +120,27 @@ button {
   color: var(--accent-strong);
   font-weight: 700;
 }
+
+@media (max-width: 700px) {
+  .hut-map {
+    min-height: 0;
+  }
+}
+
+.analytics-consent {
+  position: fixed;
+  z-index: 2000;
+  right: 16px;
+  bottom: 16px;
+  width: min(420px, calc(100vw - 32px));
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, .2);
+}
+
+.analytics-consent p { margin: 0; line-height: 1.45; }
+.analytics-consent div { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+.analytics-consent button { border: 1px solid var(--border); border-radius: 6px; padding: 9px 12px; background: var(--surface); color: var(--text); font-weight: 700; }
+.analytics-consent .analytics-consent-accept { border-color: var(--accent); background: var(--accent); color: #fff; }

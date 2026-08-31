@@ -1,9 +1,15 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+import { GoogleAnalytics } from "@/components/GoogleAnalytics";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "PZS Hut Availability Finder",
-  description: "Check public Bentral availability for Vodnikov dom na Velem polju.",
+  title: "Proste koče PZS",
+  description: "Preverite javno razpoložljivost planinskih koč PZS.",
+};
+
+export const viewport: Viewport = {
+  themeColor: "#f6f4ef",
+  colorScheme: "light",
 };
 
 export default function RootLayout({
@@ -12,8 +18,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body>{children}</body>
+    <html lang="sl">
+      <body>
+        {children}
+        <GoogleAnalytics />
+      </body>
     </html>
   );
 }

@@ -44,7 +44,7 @@ time the tunnel opens. Do not expose the database publicly just for local work.
 
 ## Production architecture
 
-The public web service never calls Bentral. A search reads the most recent matching Postgres snapshot and returns it immediately with its timestamp/source link. A missing or stale snapshot is deduplicated into a refresh job, so visitors never wait for an upstream scrape.
+The public web service never calls Bentral. A search reads the most recent matching Postgres snapshot and returns it immediately with its timestamp/source link. A missing or stale snapshot is deduplicated into a refresh job, so visitors never wait for an upstream scrape. In Railway the web app and worker are separate services; local development connects to the remote database through the Railway tunnel.
 
 The `refresh_jobs.cache_key` primary key makes concurrent requests safe. A worker claims jobs with `FOR UPDATE SKIP LOCKED`, processes sequentially, checks every unit's `unavailDates` calendar, and only prices calendar-available units. `unavail` blocks, `unavail_start` is allowed only on departure, and `unavail_end` is allowed. Durable price cache entries last one week and include hut, unit, dates, and guests.
 

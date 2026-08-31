@@ -19,18 +19,39 @@ export async function enqueueRefresh(key: string, hutId: string) {
   await pool.query(`INSERT INTO refresh_jobs (cache_key, hut_id, status)
     VALUES ($1, $2, 'queued')
     ON CONFLICT (cache_key) DO UPDATE SET
-      status = CASE WHEN refresh_jobs.status IN ('succeeded', 'failed') THEN 'queued' ELSE refresh_jobs.status END,
-      available_at = CASE WHEN refresh_jobs.status IN ('succeeded', 'failed') THEN now() ELSE refresh_jobs.available_at END,
+      status = CASE
+        WHEN refresh_jobs.status = 'succeeded' THEN 'queued'
+        WHEN refresh_jobs.status = 'failed' AND refresh_jobs.updated_at < now() - interval '5 minutes' THEN 'queued'
+        ELSE refresh_jobs.status
+      END,
+      available_at = CASE
+        WHEN refresh_jobs.status = 'succeeded' THEN now()
+        WHEN refresh_jobs.status = 'failed' AND refresh_jobs.updated_at < now() - interval '5 minutes' THEN now()
+        ELSE refresh_jobs.available_at
+      END,
       updated_at = now()`, [key, hutId]);
+}
+
+async function getRefreshJob(key: string) {
+  const { rows } = await pool.query<{ status: "queued" | "running" | "succeeded" | "failed"; last_error: string | null; updated_at: Date }>(
+    "SELECT status, last_error, updated_at FROM refresh_jobs WHERE cache_key = $1",
+    [key],
+  );
+  return rows[0];
 }
 
 export async function getStoredSummary(hut: HutAvailabilitySummary["hut"], input: AvailabilitySearchInput): Promise<HutAvailabilitySummary> {
   const key = snapshotKey(hut.id, input);
   const snapshot = await getSnapshot(key);
-  if (!snapshot || snapshot.stale) await enqueueRefresh(key, hut.id);
+  let job = await getRefreshJob(key);
+  const failedRecently = job?.status === "failed" && Date.now() - new Date(job.updated_at).getTime() < 5 * 60 * 1000;
+  if ((!snapshot || snapshot.stale) && !failedRecently) {
+    await enqueueRefresh(key, hut.id);
+    job = await getRefreshJob(key);
+  }
   const results = snapshot?.result ?? [];
   const lowest = results.filter((item) => item.status === "available" && item.price !== undefined).sort((a, b) => Number(a.price) - Number(b.price))[0];
-  return { hut, results, status: snapshot ? "checked" : "pending", availableCount: results.filter((item) => item.status === "available").length, unavailableCount: results.filter((item) => item.status === "unavailable").length, unresolvedCount: results.filter((item) => item.status === "unknown" || item.status === "error").length, lowestPrice: lowest?.price, lowestPriceDisplay: lowest?.priceDisplay, checkedAt: snapshot?.checkedAt ?? "", stale: snapshot?.stale ?? true, mode: "full", sourceUrl: snapshot?.sourceUrl ?? hut.bentralIframeUrl, errorMessage: snapshot?.lastError };
+  return { hut, results, status: job?.status === "failed" ? "error" : snapshot ? "checked" : "pending", availableCount: results.filter((item) => item.status === "available").length, unavailableCount: results.filter((item) => item.status === "unavailable").length, unresolvedCount: results.filter((item) => item.status === "unknown" || item.status === "error").length, lowestPrice: lowest?.price, lowestPriceDisplay: lowest?.priceDisplay, checkedAt: snapshot?.checkedAt ?? "", stale: snapshot?.stale ?? true, mode: "full", sourceUrl: snapshot?.sourceUrl ?? hut.bentralIframeUrl, errorMessage: job?.last_error ?? snapshot?.lastError };
 }
 
 export type StoredWeekAvailability = {

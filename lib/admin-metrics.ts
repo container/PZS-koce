@@ -2,34 +2,53 @@ import { pool } from "@/lib/db";
 
 type RequestType = "iframe" | "availability";
 
-export async function recordBentralRequest(input: {
+type BentralRequestInput = {
   hutId: string;
   requestType: RequestType;
   unitId?: string;
   arrivalDate?: string;
   departureDate?: string;
-  responseStatus?: number;
-  durationMs: number;
-  errorMessage?: string;
-}) {
+};
+
+export async function beginBentralRequest(input: BentralRequestInput) {
   try {
-    await pool.query(
+    const result = await pool.query<{ id: string }>(
       `INSERT INTO bentral_requests
         (hut_id, request_type, unit_id, arrival_date, departure_date, response_status, duration_ms, error_message)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+       VALUES ($1,$2,$3,$4,$5,NULL,0,NULL)
+       RETURNING id`,
       [
         input.hutId,
         input.requestType,
         input.unitId ?? null,
         input.arrivalDate ?? null,
         input.departureDate ?? null,
-        input.responseStatus ?? null,
-        input.durationMs,
-        input.errorMessage ?? null,
       ],
     );
+    return result.rows[0]?.id ?? null;
   } catch (error) {
-    console.warn("[admin] failed to record Bentral request", error);
+    console.warn("[admin] failed to start Bentral request log", error);
+    return null;
+  }
+}
+
+export async function finishBentralRequest(input: {
+  id: string | null;
+  responseStatus?: number;
+  durationMs: number;
+  errorMessage?: string;
+}) {
+  if (!input.id) return;
+
+  try {
+    await pool.query(
+      `UPDATE bentral_requests
+       SET response_status = $2, duration_ms = $3, error_message = $4
+       WHERE id = $1`,
+      [input.id, input.responseStatus ?? null, input.durationMs, input.errorMessage ?? null],
+    );
+  } catch (error) {
+    console.warn("[admin] failed to finish Bentral request log", error);
   }
 }
 
@@ -54,7 +73,7 @@ export async function getAdminMetrics() {
         FROM refresh_jobs GROUP BY status ORDER BY status`),
       pool.query(`SELECT hut_id, request_type, unit_id, arrival_date, departure_date,
           response_status, duration_ms, error_message, created_at
-        FROM bentral_requests ORDER BY created_at DESC LIMIT 20`),
+        FROM bentral_requests ORDER BY id DESC LIMIT 100`),
       pool.query(`SELECT hut_id, arrival_date, departure_date, adults, checked_at, expires_at,
           jsonb_array_length(result) AS unit_count
         FROM availability_snapshots ORDER BY checked_at DESC LIMIT 12`),

@@ -1,5 +1,5 @@
 import * as cheerio from "cheerio";
-import { recordBentralRequest } from "@/lib/admin-metrics";
+import { beginBentralRequest, finishBentralRequest } from "@/lib/admin-metrics";
 import { getOrSetCached, getCachedEntry, setCached } from "@/lib/cache";
 import { formatBentralDate } from "@/lib/validation";
 import type {
@@ -156,24 +156,27 @@ async function fetchAndParseIframe(hut: Hut): Promise<ParsedIframe> {
 
   const startedAt = Date.now();
   let response: Response;
+  let requestId: string | null = null;
 
   try {
+    requestId = await beginBentralRequest({
+      hutId: hut.id,
+      requestType: "iframe",
+    });
     response = await fetch(hut.bentralIframeUrl, {
       headers: {
         "User-Agent": "Mozilla/5.0 (compatible; PZSAvailabilityMVP/0.1)",
       },
       next: { revalidate: 0 },
     });
-    await recordBentralRequest({
-      hutId: hut.id,
-      requestType: "iframe",
+    await finishBentralRequest({
+      id: requestId,
       responseStatus: response.status,
       durationMs: Date.now() - startedAt,
     });
   } catch (error) {
-    await recordBentralRequest({
-      hutId: hut.id,
-      requestType: "iframe",
+    await finishBentralRequest({
+      id: requestId,
       durationMs: Date.now() - startedAt,
       errorMessage: error instanceof Error ? error.message : "Network request failed.",
     });
@@ -361,8 +364,16 @@ async function checkUnitAvailability(
     }
 
     let response: Response;
+    let requestId: string | null = null;
 
     try {
+      requestId = await beginBentralRequest({
+        hutId: hut.id,
+        requestType: "availability",
+        unitId: unit.bentralUnitId,
+        arrivalDate: input.arrivalDate,
+        departureDate: input.departureDate,
+      });
       response = await fetch(BENTRAL_AVAILABILITY_URL, {
         method: "POST",
         headers: {
@@ -373,22 +384,14 @@ async function checkUnitAvailability(
         },
         body,
       });
-      await recordBentralRequest({
-        hutId: hut.id,
-        requestType: "availability",
-        unitId: unit.bentralUnitId,
-        arrivalDate: input.arrivalDate,
-        departureDate: input.departureDate,
+      await finishBentralRequest({
+        id: requestId,
         responseStatus: response.status,
         durationMs: Date.now() - startedAt,
       });
     } catch (error) {
-      await recordBentralRequest({
-        hutId: hut.id,
-        requestType: "availability",
-        unitId: unit.bentralUnitId,
-        arrivalDate: input.arrivalDate,
-        departureDate: input.departureDate,
+      await finishBentralRequest({
+        id: requestId,
         durationMs: Date.now() - startedAt,
         errorMessage: error instanceof Error ? error.message : "Network request failed.",
       });

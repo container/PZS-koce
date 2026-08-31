@@ -5,11 +5,11 @@ import { AutoRefresh } from "./AutoRefresh";
 import styles from "./page.module.css";
 
 function formatDate(value: string | Date | null) {
-  return value ? new Date(value).toLocaleString() : "—";
+  return value ? new Date(value).toLocaleString("sl-SI") : "—";
 }
 
 function formatDay(value: string | Date | null) {
-  return value ? new Date(value).toLocaleDateString() : "—";
+  return value ? new Date(value).toLocaleDateString("sl-SI") : "—";
 }
 
 function countForStatus(jobs: { status: string; total: number }[], status: string) {
@@ -27,16 +27,16 @@ export default async function AdminPage() {
       <main className={styles.page}>
         <header className={styles.header}>
           <div>
-            <p className={styles.eyebrow}>Internal monitoring</p>
-            <h1>Bentral request dashboard</h1>
+            <p className={styles.eyebrow}>Notranji nadzor</p>
+            <h1>Nadzorna plošča zahtevkov Bentral</h1>
           </div>
-          <Link href="/">Back to availability</Link>
+          <Link href="/">Nazaj na razpoložljivost</Link>
         </header>
         <section className={styles.setup}>
-          <h2>Database connection needed</h2>
+          <h2>Potrebna je povezava z bazo podatkov</h2>
           <p>
-            This dashboard reads the shared cache and request log from PostgreSQL. Connect
-            the app to your remote database, then run the migrations there once.
+            Ta nadzorna plošča bere skupni predpomnilnik in dnevnik zahtevkov iz PostgreSQL.
+            Aplikacijo povežite z oddaljeno zbirko podatkov in tam enkrat zaženite migracije.
           </p>
           <code>DATABASE_URL=postgresql://…</code>
           <code>npm run db:migrate</code>
@@ -49,63 +49,64 @@ export default async function AdminPage() {
     <main className={styles.page}>
       <header className={styles.header}>
         <div>
-          <p className={styles.eyebrow}>Internal monitoring</p>
-          <h1>Bentral request dashboard</h1>
+          <p className={styles.eyebrow}>Notranji nadzor</p>
+          <h1>Nadzorna plošča zahtevkov Bentral</h1>
           <p>
-            Counts below are outbound calls to Bentral only. Browser requests that only
-            read Postgres are not counted.
+            Spodnje številke prikazujejo le odhodne klice v Bentral. Zahtevki brskalnika,
+            ki samo berejo PostgreSQL, niso vključeni.
           </p>
           <AutoRefresh />
         </div>
-        <Link href="/">Back to availability</Link>
+        <Link href="/">Nazaj na razpoložljivost</Link>
       </header>
 
-      <section className={styles.cards} aria-label="Bentral request summary">
-        <Metric label="Last hour" value={metrics.requestCounts.last_hour} />
-        <Metric label="Last 24 hours" value={metrics.requestCounts.last_day} />
-        <Metric label="All time" value={metrics.requestCounts.total} />
-        <Metric label="Failed calls" value={metrics.requestCounts.failed} danger />
+      <section className={styles.cards} aria-label="Povzetek zahtevkov Bentral">
+        <Metric label="Zadnja ura" value={metrics.requestCounts.last_hour} />
+        <Metric label="Zadnjih 24 ur" value={metrics.requestCounts.last_day} />
+        <Metric label="Skupaj" value={metrics.requestCounts.total} />
+        <Metric label="Neuspešni klici" value={metrics.requestCounts.failed} danger />
       </section>
 
       <section className={styles.grid}>
-        <Panel title="Request types">
+        <Panel title="Vrste zahtevkov">
           <dl className={styles.definitionList}>
             {metrics.requestTypes.map((request) => (
               <div key={request.request_type}>
-                <dt>{request.request_type === "iframe" ? "Hut iframe loads" : "Unit pricing checks"}</dt>
-                <dd>{request.total} total · {request.last_day} today</dd>
+                <dt>{request.request_type === "iframe" ? "Nalaganja iframea koče" : "Preverjanja cen enot"}</dt>
+                <dd>{request.total} skupaj · {request.last_day} danes</dd>
               </div>
             ))}
           </dl>
         </Panel>
 
-        <Panel title="Cache health">
+        <Panel title="Stanje predpomnilnika">
           <dl className={styles.definitionList}>
-            <div><dt>Fresh availability snapshots</dt><dd>{metrics.caches.availability_fresh}</dd></div>
-            <div><dt>Stale availability snapshots</dt><dd>{metrics.caches.availability_stale}</dd></div>
-            <div><dt>All availability snapshots</dt><dd>{metrics.caches.availability_total}</dd></div>
-            <div><dt>Fresh unit-price entries</dt><dd>{metrics.caches.price_fresh}</dd></div>
+            <div><dt>Sveži posnetki razpoložljivosti</dt><dd>{metrics.caches.availability_fresh}</dd></div>
+            <div><dt>Zastareli posnetki razpoložljivosti</dt><dd>{metrics.caches.availability_stale}</dd></div>
+            <div><dt>Vsi posnetki razpoložljivosti</dt><dd>{metrics.caches.availability_total}</dd></div>
+            <div><dt>Sveži vnosi cen enot</dt><dd>{metrics.caches.price_fresh}</dd></div>
           </dl>
         </Panel>
 
-        <Panel title="Refresh queue">
+        <Panel title="Čakalna vrsta osveževanja">
           <dl className={styles.definitionList}>
-            <div><dt>Queued</dt><dd>{countForStatus(metrics.jobs, "queued")}</dd></div>
-            <div><dt>Running</dt><dd>{countForStatus(metrics.jobs, "running")}</dd></div>
-            <div><dt>Succeeded</dt><dd>{countForStatus(metrics.jobs, "succeeded")}</dd></div>
-            <div><dt>Failed</dt><dd>{countForStatus(metrics.jobs, "failed")}</dd></div>
+            <div><dt>V čakalni vrsti</dt><dd>{countForStatus(metrics.jobs, "queued")}</dd></div>
+            <div><dt>V izvajanju</dt><dd>{countForStatus(metrics.jobs, "running")}</dd></div>
+            <div><dt>Uspešno končano</dt><dd>{countForStatus(metrics.jobs, "succeeded")}</dd></div>
+            <div><dt>Neuspešno</dt><dd>{countForStatus(metrics.jobs, "failed")}</dd></div>
           </dl>
         </Panel>
       </section>
 
       <section className={styles.section}>
-        <h2>Recent Bentral calls</h2>
+        <h2>Živi dnevnik odhodnih klicev Bentral</h2>
+        <p className={styles.logDescription}>Prikazanih je zadnjih 100 klicev. Nova vrstica se pojavi ob začetku klica in se nato dopolni z odzivom Bentrala ali napako.</p>
         <div className={styles.tableWrap}>
           <table>
-            <thead><tr><th>Time</th><th>Hut</th><th>Call</th><th>Stay</th><th>Status</th><th>Duration</th></tr></thead>
+            <thead><tr><th>Čas</th><th>Koča</th><th>Odhodni klic</th><th>Bivanje</th><th>Odgovor</th><th>Trajanje</th></tr></thead>
             <tbody>
               {metrics.recentRequests.length === 0 ? (
-                <tr><td colSpan={6}>No outbound Bentral calls recorded yet.</td></tr>
+                <tr><td colSpan={6}>Odhodni klici Bentral še niso zabeleženi.</td></tr>
               ) : metrics.recentRequests.map((request, index) => (
                 <tr key={`${request.created_at}-${request.hut_id}-${index}`}>
                   <td>{formatDate(request.created_at)}</td>
@@ -113,7 +114,7 @@ export default async function AdminPage() {
                   <td>{request.request_type}{request.unit_id ? ` · ${request.unit_id}` : ""}</td>
                   <td>{request.arrival_date ? `${formatDay(request.arrival_date)} → ${formatDay(request.departure_date)}` : "—"}</td>
                   <td className={request.error_message || (request.response_status ?? 0) >= 400 ? styles.failure : ""}>
-                    {request.error_message ?? request.response_status ?? "network error"}
+                    {request.error_message ?? (request.response_status ? `HTTP ${request.response_status}` : "Čaka na odgovor …")}
                   </td>
                   <td>{request.duration_ms} ms</td>
                 </tr>
@@ -124,13 +125,13 @@ export default async function AdminPage() {
       </section>
 
       <section className={styles.section}>
-        <h2>Latest cached availability</h2>
+        <h2>Najnovejši predpomnjeni podatki o razpoložljivosti</h2>
         <div className={styles.tableWrap}>
           <table>
-            <thead><tr><th>Hut</th><th>Stay</th><th>Guests</th><th>Units</th><th>Checked</th><th>Fresh until</th></tr></thead>
+            <thead><tr><th>Koča</th><th>Bivanje</th><th>Gosti</th><th>Enote</th><th>Preverjeno</th><th>Sveže do</th></tr></thead>
             <tbody>
               {metrics.recentSnapshots.length === 0 ? (
-                <tr><td colSpan={6}>No availability snapshots stored yet.</td></tr>
+                <tr><td colSpan={6}>Posnetki razpoložljivosti še niso shranjeni.</td></tr>
               ) : metrics.recentSnapshots.map((snapshot, index) => (
                 <tr key={`${snapshot.hut_id}-${snapshot.checked_at}-${index}`}>
                   <td>{snapshot.hut_id}</td>

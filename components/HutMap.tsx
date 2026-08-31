@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef } from "react";
 import L from "leaflet";
-import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
+import { MapContainer, Marker, TileLayer, useMap } from "react-leaflet";
 import type { Hut } from "@/types/availability";
 
 export type HutMapStatus = "available" | "unavailable" | "unknown" | "error";
@@ -32,22 +32,6 @@ function markerIcon(status: HutMapStatus, selected: boolean, stale?: boolean) {
     iconAnchor: selected ? [14, 14] : [11, 11],
     popupAnchor: [0, selected ? -14 : -11],
   });
-}
-
-function statusText(summary: HutMapSummary) {
-  if (summary.status === "available") {
-    return `${summary.availableCount ?? 0} available${summary.lowestPriceDisplay ? ` from ${summary.lowestPriceDisplay}` : ""}`;
-  }
-
-  if (summary.status === "unavailable") {
-    return "No availability found";
-  }
-
-  if (summary.status === "error") {
-    return "Could not check";
-  }
-
-  return "Not checked yet";
 }
 
 function FitMap({
@@ -141,7 +125,7 @@ export function HutMap({ summaries, selectedHutId, onSelectHut, onBoundsChange }
       zoom={10}
     >
       <TileLayer
-        attribution='Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="https://viewfinderpanoramas.org/">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org/">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
+        attribution='Podatki zemljevida: &copy; sodelavci <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, <a href="https://viewfinderpanoramas.org/">SRTM</a> | Slog zemljevida: &copy; <a href="https://opentopomap.org/">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
         url="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png"
       />
       <FitMap summaries={summaries} selectedHutId={selectedHutId} />
@@ -157,19 +141,7 @@ export function HutMap({ summaries, selectedHutId, onSelectHut, onBoundsChange }
             }}
             icon={markerIcon(summary.status, selected, summary.stale)}
             position={[summary.hut.lat, summary.hut.lng]}
-          >
-            <Popup>
-              <div className="hut-map-popup">
-                <strong>{summary.hut.name}</strong>
-                <span>{summary.hut.region}</span>
-                <span>{statusText(summary)}</span>
-                {summary.stale && <span>Cached result is stale</span>}
-                <button type="button" onClick={() => onSelectHut(summary.hut.id)}>
-                  Show in list
-                </button>
-              </div>
-            </Popup>
-          </Marker>
+          />
         );
       })}
     </MapContainer>

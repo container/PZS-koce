@@ -8,7 +8,7 @@ export function AutoRefresh() {
 
   useEffect(() => {
     const refresh = () => router.refresh();
-    const interval = window.setInterval(refresh, 10_000);
+    const interval = window.setInterval(refresh, 2_000);
     window.addEventListener("focus", refresh);
 
     return () => {
@@ -17,5 +17,5 @@ export function AutoRefresh() {
     };
   }, [router]);
 
-  return <p aria-live="polite" style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: ".8rem" }}>Updates automatically every 10 seconds.</p>;
+  return <p aria-live="polite" style={{ margin: "8px 0 0", color: "var(--muted)", fontSize: ".8rem" }}>Dnevnik se samodejno osvežuje vsaki 2 sekundi.</p>;
 }
